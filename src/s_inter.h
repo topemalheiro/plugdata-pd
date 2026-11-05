@@ -3,8 +3,10 @@
 
 typedef void (*pd_gui_callback)(void*, char const*, int, t_atom*);
 typedef void (*pd_message_callback)(void*, int, void*, t_symbol*, int, t_atom*);
+typedef void (*pd_trace_callback)(void*, int, void*, t_symbol*, int, t_atom*);
 
 void register_gui_triggers(t_pdinstance* instance, void* target, pd_gui_callback gui_callback, pd_message_callback message_callback);
+void register_trace_trigger(t_pdinstance* instance, void* target, pd_trace_callback trace_callback);
 
 void setup_lock(const void* lock, void(*lock_func)(void*), void(*unlock_func)(void*));
 
@@ -17,6 +19,8 @@ void plugdata_forward_message(int type, void *x, t_symbol *s, int argc, t_atom *
 int plugdata_debugging_enabled();
 int plugdata_activity_enabled();
 int plugdata_debugging_or_activity_enabled();
+int plugdata_execution_order_enabled();
 
 void set_plugdata_debugging_enabled(int enabled_debugging);
 void set_plugdata_activity_enabled(int enabled_activity);
+void set_plugdata_execution_order_enabled(int enabled_execution_order);
