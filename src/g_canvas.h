@@ -212,6 +212,12 @@ struct _glist
     unsigned int gl_isclone:1;      /* exists as part of a clone object */
     int gl_zoom;                    /* zoom factor (integer zoom-in only) */
     void *gl_privatedata;           /* private data */
+        /* plugdata: Max-style presentation layout (kept last so older externals
+        see the same offsets): objects' second, presentation positions, and the
+        size of the presentation (a device's face) */
+    struct _presentation *gl_presentation;
+    int gl_presentation_w;
+    int gl_presentation_h;
 };
 
 #define gl_gobj gl_obj.te_g
@@ -566,6 +572,29 @@ EXTERN void canvas_connect_expandargs(t_canvas *x, t_floatarg fwhoout, t_floatar
 
 EXTERN void canvas_disconnect(t_canvas *x,
     t_float index1, t_float outno, t_float index2, t_float inno);
+
+    /* plugdata: one entry of a canvas's presentation layout */
+typedef struct _presentation
+{
+    t_gobj *p_obj;
+    int p_x;
+    int p_y;
+    struct _presentation *p_next;
+} t_presentation;
+
+    /* plugdata: Max-style presentation layout. An object can have a second,
+    presentation position, and a canvas a presentation size (a device's face).
+    Saved after the connections as "#X presentation obj <index> <x> <y>;" and
+    "#X presentation size <width> <height>;". */
+EXTERN void canvas_presentation(t_canvas *x, t_symbol *s, int argc, t_atom *argv);
+EXTERN int canvas_presentation_get(t_glist *x, t_gobj *y, int *xpix, int *ypix);
+EXTERN void canvas_presentation_set(t_glist *x, t_gobj *y, int xpix, int ypix);
+EXTERN void canvas_presentation_remove(t_glist *x, t_gobj *y);
+EXTERN void canvas_presentation_clear(t_glist *x);
+EXTERN int canvas_presentation_getsize(t_glist *x, int *w, int *h);
+EXTERN void canvas_presentation_setsize(t_glist *x, int w, int h);
+EXTERN int canvas_presentation_count(t_glist *x);
+EXTERN void canvas_presentation_save(t_glist *x, t_binbuf *b, int selected_only);
 EXTERN int canvas_isconnected (t_canvas *x,
     t_text *ob1, int n1, t_text *ob2, int n2);
 EXTERN void canvas_selectinrect(t_canvas *x, int lox, int loy, int hix, int hiy);

@@ -787,6 +787,7 @@ void canvas_saveto(t_canvas *x, t_binbuf *b)
                 srcno, t.tr_outno, sinkno, t.tr_inno, t.outconnect_path_info);
         }
     }
+    canvas_presentation_save(x, b, 0);
 
         /* unless everything is the default (as in ordinary subpatches)
         print out a "coords" message to set up the coordinate systems */

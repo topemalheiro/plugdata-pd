@@ -3896,6 +3896,7 @@ static t_binbuf *canvas_docopy(t_canvas *x)
 
         }
     }
+    canvas_presentation_save(x, b, 1);
     return (b);
 }
 
@@ -4582,6 +4583,51 @@ void canvas_connect_expandargs(t_canvas *x, t_floatarg fwhoout, t_floatarg foutn
     
     canvas_connect(x, gensym("connect"), 5, connectatom);
 }
+    /* write the layout: the whole canvas (saving) or only the selection, with
+    selection-relative indices (copy, cut, duplicate and their undo) */
+void canvas_presentation_save(t_glist *x, t_binbuf *b, int selected_only)
+{
+    t_presentation *p;
+    if (!selected_only && x->gl_presentation_w > 0 && x->gl_presentation_h > 0)
+        binbuf_addv(b, "sssii;", gensym("#X"), gensym("presentation"),
+            gensym("size"), x->gl_presentation_w, x->gl_presentation_h);
+    for (p = x->gl_presentation; p; p = p->p_next)
+    {
+        int index;
+        if (selected_only)
+        {
+            if (!glist_isselected(x, p->p_obj))
+                continue;
+            index = glist_selectionindex(x, p->p_obj, 1);
+        }
+        else index = canvas_getindex(x, p->p_obj);
+        binbuf_addv(b, "sssiii;", gensym("#X"), gensym("presentation"),
+            gensym("obj"), index, p->p_x, p->p_y);
+    }
+}
+
+    /* plugdata: "#X presentation obj <index> <x> <y>" and "#X presentation
+    size <w> <h>", from a file or a paste (indices then count from the paste) */
+void canvas_presentation(t_canvas *x, t_symbol *s, int argc, t_atom *argv)
+{
+    t_symbol *what = atom_getsymbolarg(0, argc, argv);
+    if (what == gensym("size") && argc >= 3)
+        canvas_presentation_setsize(x, atom_getint(argv + 1), atom_getint(argv + 2));
+    else if (what == gensym("obj") && argc >= 4)
+    {
+        t_gobj *y;
+        int index = atom_getint(argv + 1);
+        if (THISED->paste_canvas == x)
+            index += THISED->paste_onset;
+        for (y = x->gl_list; y && index > 0; y = y->g_next, index--)
+            ;
+        if (y && index == 0)
+            canvas_presentation_set(x, y, atom_getint(argv + 2), atom_getint(argv + 3));
+        else logpost(x, PD_DEBUG, "presentation: no object %d", atom_getint(argv + 1));
+    }
+    else pd_error(x, "presentation: expected 'obj <index> <x> <y>' or 'size <w> <h>'");
+}
+
 void canvas_connect(t_canvas *x, t_symbol *s, int argc, t_atom *argv)
 {
     t_int whoout, outno, whoin, inno;

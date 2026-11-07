@@ -1030,6 +1030,88 @@ int glist_fontheight(t_glist *x)
     return (sys_zoomfontheight(glist_getfont(x), glist_getzoom(x), 0));
 }
 
+/* ------------- plugdata: Max-style presentation layout ------------------ */
+
+int canvas_presentation_get(t_glist *x, t_gobj *y, int *xpix, int *ypix)
+{
+    t_presentation *p;
+    for (p = x->gl_presentation; p; p = p->p_next)
+        if (p->p_obj == y)
+        {
+            if (xpix) *xpix = p->p_x;
+            if (ypix) *ypix = p->p_y;
+            return (1);
+        }
+    return (0);
+}
+
+void canvas_presentation_set(t_glist *x, t_gobj *y, int xpix, int ypix)
+{
+    t_presentation *p, **tail;
+    for (p = x->gl_presentation; p; p = p->p_next)
+        if (p->p_obj == y)
+            break;
+    if (!p)
+    {
+        p = (t_presentation *)getbytes(sizeof(*p));
+        p->p_obj = y;
+        p->p_next = 0;
+        for (tail = &x->gl_presentation; *tail; tail = &(*tail)->p_next)
+            ;
+        *tail = p;
+    }
+    p->p_x = xpix;
+    p->p_y = ypix;
+}
+
+void canvas_presentation_remove(t_glist *x, t_gobj *y)
+{
+    t_presentation **pp;
+    for (pp = &x->gl_presentation; *pp; pp = &(*pp)->p_next)
+        if ((*pp)->p_obj == y)
+        {
+            t_presentation *dead = *pp;
+            *pp = dead->p_next;
+            freebytes(dead, sizeof(*dead));
+            return;
+        }
+}
+
+void canvas_presentation_clear(t_glist *x)
+{
+    while (x->gl_presentation)
+    {
+        t_presentation *dead = x->gl_presentation;
+        x->gl_presentation = dead->p_next;
+        freebytes(dead, sizeof(*dead));
+    }
+    x->gl_presentation_w = x->gl_presentation_h = 0;
+}
+
+int canvas_presentation_getsize(t_glist *x, int *w, int *h)
+{
+    if (x->gl_presentation_w <= 0 || x->gl_presentation_h <= 0)
+        return (0);
+    if (w) *w = x->gl_presentation_w;
+    if (h) *h = x->gl_presentation_h;
+    return (1);
+}
+
+void canvas_presentation_setsize(t_glist *x, int w, int h)
+{
+    x->gl_presentation_w = (w > 0 ? w : 0);
+    x->gl_presentation_h = (h > 0 ? h : 0);
+}
+
+int canvas_presentation_count(t_glist *x)
+{
+    int n = 0;
+    t_presentation *p;
+    for (p = x->gl_presentation; p; p = p->p_next)
+        n++;
+    return (n);
+}
+
 void canvas_free(t_canvas *x)
 {
     t_gobj *y;
@@ -1041,6 +1123,7 @@ void canvas_free(t_canvas *x)
     glist_noselect(x);
     while ((y = x->gl_list))
         glist_delete(x, y);
+    canvas_presentation_clear(x);
     if (x == glist_getcanvas(x))
         canvas_vis(x, 0);
     if (x->gl_editor)
@@ -2160,6 +2243,8 @@ void g_canvas_setup(void)
 /* -------------- connect method used in reading files ------------------ */
     class_addmethod(canvas_class, (t_method)canvas_connect,
         gensym("connect"), A_GIMME, A_NULL);
+    class_addmethod(canvas_class, (t_method)canvas_presentation,
+        gensym("presentation"), A_GIMME, A_NULL);
 
 /* -------------- IEMGUI: button, toggle, slider, etc.  ------------ */
     class_addmethod(canvas_class, (t_method)canvas_bng, gensym("bng"),

@@ -86,6 +86,7 @@ void glist_delete(t_glist *x, t_gobj *y)
         pd_this->pd_newest = NULL;
     }
 
+    canvas_presentation_remove(x, y);
     wasdeleting = canvas_setdeleting(canvas, 1);
     if (x->gl_editor)
     {
