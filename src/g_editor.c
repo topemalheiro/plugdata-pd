@@ -743,6 +743,11 @@ typedef struct _undo_move_elem
     int e_index;
     t_float e_xpix;
     t_float e_ypix;
+        /* plugdata: the presentation position too, so moves made in an
+        unlocked presentation undo as well */
+    int e_haspresentation;
+    int e_presentationx;
+    int e_presentationy;
 } t_undo_move_elem;
 
 typedef struct _undo_move
@@ -771,6 +776,8 @@ void *canvas_undo_set_move(t_canvas *x, int selected)
                 buf->u_vec[i].e_index = indx;
                 buf->u_vec[i].e_xpix = checked->te_xpix / x->gl_zoom;
                 buf->u_vec[i].e_ypix = checked->te_ypix / x->gl_zoom;
+                buf->u_vec[i].e_haspresentation = canvas_presentation_get(x, y,
+                    &buf->u_vec[i].e_presentationx, &buf->u_vec[i].e_presentationy);
                 i++;
             }
     }
@@ -784,6 +791,8 @@ void *canvas_undo_set_move(t_canvas *x, int selected)
             buf->u_vec[indx].e_index = indx;
             buf->u_vec[indx].e_xpix = checked->te_xpix / x->gl_zoom;
             buf->u_vec[indx].e_ypix = checked->te_ypix / x->gl_zoom;
+            buf->u_vec[indx].e_haspresentation = canvas_presentation_get(x, y,
+                &buf->u_vec[indx].e_presentationx, &buf->u_vec[indx].e_presentationy);
         }
     }
     THISED->canvas_undo_already_set_move = 1;
@@ -815,6 +824,18 @@ int canvas_undo_move(t_canvas *x, void *z, int action)
                 THISED->canvas_undo_already_set_move = doing;
                 buf->u_vec[i].e_xpix = x1/x->gl_zoom;
                 buf->u_vec[i].e_ypix = y1/x->gl_zoom;
+                    /* plugdata: swap the presentation position the same way */
+                if (buf->u_vec[i].e_haspresentation)
+                {
+                    int px, py;
+                    if (canvas_presentation_get(x, y, &px, &py))
+                    {
+                        canvas_presentation_set(x, y,
+                            buf->u_vec[i].e_presentationx, buf->u_vec[i].e_presentationy);
+                        buf->u_vec[i].e_presentationx = px;
+                        buf->u_vec[i].e_presentationy = py;
+                    }
+                }
                 if (cl == vinlet_class) resortin = 1;
                 else if (cl == voutlet_class) resortout = 1;
             }
