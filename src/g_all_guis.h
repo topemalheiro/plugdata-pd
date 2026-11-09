@@ -268,6 +268,9 @@ typedef struct _my_numbox
     char     x_buf[IEMGUI_MAX_NUM_LEN];
     int      x_numwidth;
     int      x_log_height;
+        /* plugdata: "active 0" greys the box out and ignores the mouse, as Max's
+        live.numbox; not saved (kept last, so the struct's start is unchanged) */
+    int      x_inactive;
 } t_my_numbox;
 
 extern int iemgui_color_hex[];

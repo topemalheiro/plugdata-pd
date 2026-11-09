@@ -754,6 +754,12 @@ static void my_numbox_free(t_my_numbox *x)
     iemgui_free(&x->x_gui);
 }
 
+    /* plugdata: Max's live.numbox "active <0|1>" (plugdata draws the inactive look) */
+static void my_numbox_active(t_my_numbox *x, t_floatarg f)
+{
+    x->x_inactive = (f == 0);
+}
+
 void g_numbox_setup(void)
 {
     my_numbox_class = class_new(gensym("nbx"), (t_newmethod)my_numbox_new,
@@ -786,6 +792,8 @@ void g_numbox_setup(void)
         gensym("send"), A_DEFSYM, 0);
     class_addmethod(my_numbox_class, (t_method)my_numbox_receive,
         gensym("receive"), A_DEFSYM, 0);
+    class_addmethod(my_numbox_class, (t_method)my_numbox_active,
+        gensym("active"), A_FLOAT, 0);
     class_addmethod(my_numbox_class, (t_method)my_numbox_label,
         gensym("label"), A_DEFSYM, 0);
     class_addmethod(my_numbox_class, (t_method)my_numbox_label_pos,
