@@ -32,6 +32,7 @@ void x_arithmetic_setup(void);
 void x_array_setup(void);
 void x_midi_setup(void);
 void x_misc_setup(void);
+void x_spite_setup(void);
 void x_net_setup(void);
 void x_file_setup(void);
 void x_qlist_setup(void);
@@ -92,6 +93,7 @@ void conf_init(void)
     x_array_setup();
     x_midi_setup();
     x_misc_setup();
+    x_spite_setup();     /* plugdata (PgD4S): spite.tab, pcontrol, thispatcher */
     x_net_setup();
     x_file_setup();
     x_qlist_setup();
