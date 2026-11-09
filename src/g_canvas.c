@@ -1103,6 +1103,107 @@ void canvas_presentation_setsize(t_glist *x, int w, int h)
     x->gl_presentation_h = (h > 0 ? h : 0);
 }
 
+    /* ------------- plugdata: per-object attributes ------------------ */
+
+static t_objattr *canvas_attr_find(t_glist *x, t_gobj *y, t_symbol *key)
+{
+    t_objattr *a;
+    for (a = x->gl_attr; a; a = a->a_next)
+        if (a->a_obj == y && a->a_key == key)
+            return (a);
+    return (0);
+}
+
+int canvas_attr_get(t_glist *x, t_gobj *y, t_symbol *key,
+    int *argc, t_atom **argv)
+{
+    t_objattr *a = canvas_attr_find(x, y, key);
+    if (!a)
+        return (0);
+    if (argc) *argc = a->a_argc;
+    if (argv) *argv = a->a_argv;
+    return (1);
+}
+
+static void objattr_free(t_objattr *a)
+{
+    if (a->a_argv)
+        freebytes(a->a_argv, a->a_argc * sizeof(t_atom));
+    freebytes(a, sizeof(*a));
+}
+
+void canvas_attr_set(t_glist *x, t_gobj *y, t_symbol *key,
+    int argc, t_atom *argv)
+{
+    t_objattr *a, **pp;
+    if (argc <= 0)
+    {
+        for (pp = &x->gl_attr; *pp; pp = &(*pp)->a_next)
+            if ((*pp)->a_obj == y && (*pp)->a_key == key)
+            {
+                a = *pp;
+                *pp = a->a_next;
+                objattr_free(a);
+                return;
+            }
+        return;
+    }
+    if (!(a = canvas_attr_find(x, y, key)))
+    {
+        a = (t_objattr *)getbytes(sizeof(*a));
+        a->a_obj = y;
+        a->a_key = key;
+        for (pp = &x->gl_attr; *pp; pp = &(*pp)->a_next)
+            ;
+        *pp = a;
+    }
+    else if (a->a_argv)
+        freebytes(a->a_argv, a->a_argc * sizeof(t_atom));
+    a->a_argc = argc;
+    a->a_argv = (t_atom *)copybytes(argv, argc * sizeof(t_atom));
+}
+
+void canvas_attr_remove(t_glist *x, t_gobj *y)
+{
+    t_objattr **pp = &x->gl_attr;
+    while (*pp)
+    {
+        if ((*pp)->a_obj == y)
+        {
+            t_objattr *dead = *pp;
+            *pp = dead->a_next;
+            objattr_free(dead);
+        }
+        else pp = &(*pp)->a_next;
+    }
+}
+
+void canvas_attr_clear(t_glist *x)
+{
+    while (x->gl_attr)
+    {
+        t_objattr *dead = x->gl_attr;
+        x->gl_attr = dead->a_next;
+        objattr_free(dead);
+    }
+}
+
+    /* give "to" a copy of every attribute of "from" (a retyped object is a
+    new object in Pd) */
+void canvas_attr_copy(t_glist *x, t_gobj *from, t_gobj *to)
+{
+    t_objattr *a, *last = 0;
+    for (a = x->gl_attr; a; a = a->a_next)
+        last = a;
+    for (a = x->gl_attr; a; a = a->a_next)
+    {
+        if (a->a_obj == from)
+            canvas_attr_set(x, to, a->a_key, a->a_argc, a->a_argv);
+        if (a == last)
+            break;
+    }
+}
+
 int canvas_presentation_count(t_glist *x)
 {
     int n = 0;
@@ -1124,6 +1225,7 @@ void canvas_free(t_canvas *x)
     while ((y = x->gl_list))
         glist_delete(x, y);
     canvas_presentation_clear(x);
+    canvas_attr_clear(x);
     if (x == glist_getcanvas(x))
         canvas_vis(x, 0);
     if (x->gl_editor)
@@ -2245,6 +2347,8 @@ void g_canvas_setup(void)
         gensym("connect"), A_GIMME, A_NULL);
     class_addmethod(canvas_class, (t_method)canvas_presentation,
         gensym("presentation"), A_GIMME, A_NULL);
+    class_addmethod(canvas_class, (t_method)canvas_attr,
+        gensym("attr"), A_GIMME, A_NULL);
 
 /* -------------- IEMGUI: button, toggle, slider, etc.  ------------ */
     class_addmethod(canvas_class, (t_method)canvas_bng, gensym("bng"),

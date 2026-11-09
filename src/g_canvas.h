@@ -218,6 +218,12 @@ struct _glist
     struct _presentation *gl_presentation;
     int gl_presentation_w;
     int gl_presentation_h;
+        /* plugdata: open this canvas showing its presentation, in a floating
+        window (Max's openinpresentation, and "window flags float") */
+    unsigned int gl_presentation_open:1;
+    unsigned int gl_presentation_float:1;
+        /* plugdata: per-object attributes, "#X attr <index> <key> <values>" */
+    struct _objattr *gl_attr;
 };
 
 #define gl_gobj gl_obj.te_g
@@ -595,6 +601,30 @@ EXTERN int canvas_presentation_getsize(t_glist *x, int *w, int *h);
 EXTERN void canvas_presentation_setsize(t_glist *x, int w, int h);
 EXTERN int canvas_presentation_count(t_glist *x);
 EXTERN void canvas_presentation_save(t_glist *x, t_binbuf *b, int selected_only);
+
+    /* plugdata: per-object attributes, for options an object's own creation
+    arguments can't hold (ELSE's or vanilla's objects). Saved after the
+    connections as "#X attr <index> <key> <values...>;", kept through copy,
+    paste, duplicate and undo, dropped with their object. */
+typedef struct _objattr
+{
+    t_gobj *a_obj;
+    t_symbol *a_key;
+    int a_argc;
+    t_atom *a_argv;
+    struct _objattr *a_next;
+} t_objattr;
+
+EXTERN void canvas_attr(t_canvas *x, t_symbol *s, int argc, t_atom *argv);
+EXTERN int canvas_attr_get(t_glist *x, t_gobj *y, t_symbol *key,
+    int *argc, t_atom **argv);
+    /* argc 0 removes the key */
+EXTERN void canvas_attr_set(t_glist *x, t_gobj *y, t_symbol *key,
+    int argc, t_atom *argv);
+EXTERN void canvas_attr_remove(t_glist *x, t_gobj *y);
+EXTERN void canvas_attr_clear(t_glist *x);
+EXTERN void canvas_attr_copy(t_glist *x, t_gobj *from, t_gobj *to);
+EXTERN void canvas_attr_save(t_glist *x, t_binbuf *b, int selected_only);
 EXTERN int canvas_isconnected (t_canvas *x,
     t_text *ob1, int n1, t_text *ob2, int n2);
 EXTERN void canvas_selectinrect(t_canvas *x, int lox, int loy, int hix, int hiy);

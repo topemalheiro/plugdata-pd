@@ -3918,6 +3918,7 @@ static t_binbuf *canvas_docopy(t_canvas *x)
         }
     }
     canvas_presentation_save(x, b, 1);
+    canvas_attr_save(x, b, 1);
     return (b);
 }
 
@@ -4612,6 +4613,12 @@ void canvas_presentation_save(t_glist *x, t_binbuf *b, int selected_only)
     if (!selected_only && x->gl_presentation_w > 0 && x->gl_presentation_h > 0)
         binbuf_addv(b, "sssii;", gensym("#X"), gensym("presentation"),
             gensym("size"), x->gl_presentation_w, x->gl_presentation_h);
+    if (!selected_only && x->gl_presentation_open)
+        binbuf_addv(b, "sssi;", gensym("#X"), gensym("presentation"),
+            gensym("open"), 1);
+    if (!selected_only && x->gl_presentation_float)
+        binbuf_addv(b, "sssi;", gensym("#X"), gensym("presentation"),
+            gensym("float"), 1);
     for (p = x->gl_presentation; p; p = p->p_next)
     {
         int index;
@@ -4634,6 +4641,10 @@ void canvas_presentation(t_canvas *x, t_symbol *s, int argc, t_atom *argv)
     t_symbol *what = atom_getsymbolarg(0, argc, argv);
     if (what == gensym("size") && argc >= 3)
         canvas_presentation_setsize(x, atom_getint(argv + 1), atom_getint(argv + 2));
+    else if (what == gensym("open"))
+        x->gl_presentation_open = (atom_getfloatarg(1, argc, argv) != 0);
+    else if (what == gensym("float"))
+        x->gl_presentation_float = (atom_getfloatarg(1, argc, argv) != 0);
     else if (what == gensym("obj") && argc >= 4)
     {
         t_gobj *y;
@@ -4646,7 +4657,49 @@ void canvas_presentation(t_canvas *x, t_symbol *s, int argc, t_atom *argv)
             canvas_presentation_set(x, y, atom_getint(argv + 2), atom_getint(argv + 3));
         else logpost(x, PD_DEBUG, "presentation: no object %d", atom_getint(argv + 1));
     }
-    else pd_error(x, "presentation: expected 'obj <index> <x> <y>' or 'size <w> <h>'");
+    else pd_error(x, "presentation: expected 'obj <index> <x> <y>', 'size <w> <h>', 'open <0|1>' or 'float <0|1>'");
+}
+
+    /* plugdata: "#X attr <index> <key> <values...>", from a file or a paste
+    (indices then count from the paste) */
+void canvas_attr(t_canvas *x, t_symbol *s, int argc, t_atom *argv)
+{
+    t_gobj *y;
+    int index;
+    if (argc < 3 || argv[0].a_type != A_FLOAT || argv[1].a_type != A_SYMBOL)
+    {
+        pd_error(x, "attr: expected '<index> <key> <values...>'");
+        return;
+    }
+    index = atom_getint(argv);
+    if (THISED->paste_canvas == x)
+        index += THISED->paste_onset;
+    for (y = x->gl_list; y && index > 0; y = y->g_next, index--)
+        ;
+    if (y && index == 0)
+        canvas_attr_set(x, y, argv[1].a_w.w_symbol, argc - 2, argv + 2);
+    else logpost(x, PD_DEBUG, "attr: no object %d", atom_getint(argv));
+}
+
+    /* write the attributes: the whole canvas (saving) or only the selection,
+    with selection-relative indices (copy, cut, duplicate and their undo) */
+void canvas_attr_save(t_glist *x, t_binbuf *b, int selected_only)
+{
+    t_objattr *a;
+    for (a = x->gl_attr; a; a = a->a_next)
+    {
+        int index;
+        if (selected_only)
+        {
+            if (!glist_isselected(x, a->a_obj))
+                continue;
+            index = glist_selectionindex(x, a->a_obj, 1);
+        }
+        else index = canvas_getindex(x, a->a_obj);
+        binbuf_addv(b, "ssis", gensym("#X"), gensym("attr"), index, a->a_key);
+        binbuf_add(b, a->a_argc, a->a_argv);
+        binbuf_addsemi(b);
+    }
 }
 
 void canvas_connect(t_canvas *x, t_symbol *s, int argc, t_atom *argv)

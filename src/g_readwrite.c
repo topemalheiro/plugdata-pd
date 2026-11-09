@@ -788,6 +788,7 @@ void canvas_saveto(t_canvas *x, t_binbuf *b)
         }
     }
     canvas_presentation_save(x, b, 0);
+    canvas_attr_save(x, b, 0);
 
         /* unless everything is the default (as in ordinary subpatches)
         print out a "coords" message to set up the coordinate systems */
