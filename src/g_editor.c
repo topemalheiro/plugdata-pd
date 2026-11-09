@@ -4610,6 +4610,9 @@ void canvas_connect_expandargs(t_canvas *x, t_floatarg fwhoout, t_floatarg foutn
 void canvas_presentation_save(t_glist *x, t_binbuf *b, int selected_only)
 {
     t_presentation *p;
+    t_canvasindex index;
+    if (!selected_only && x->gl_presentation)
+        canvasindex_build(&index, x);
     if (!selected_only && x->gl_presentation_w > 0 && x->gl_presentation_h > 0)
         binbuf_addv(b, "sssii;", gensym("#X"), gensym("presentation"),
             gensym("size"), x->gl_presentation_w, x->gl_presentation_h);
@@ -4621,17 +4624,19 @@ void canvas_presentation_save(t_glist *x, t_binbuf *b, int selected_only)
             gensym("float"), 1);
     for (p = x->gl_presentation; p; p = p->p_next)
     {
-        int index;
+        int objindex;
         if (selected_only)
         {
             if (!glist_isselected(x, p->p_obj))
                 continue;
-            index = glist_selectionindex(x, p->p_obj, 1);
+            objindex = glist_selectionindex(x, p->p_obj, 1);
         }
-        else index = canvas_getindex(x, p->p_obj);
+        else objindex = canvasindex_get(&index, p->p_obj);
         binbuf_addv(b, "sssiii;", gensym("#X"), gensym("presentation"),
-            gensym("obj"), index, p->p_x, p->p_y);
+            gensym("obj"), objindex, p->p_x, p->p_y);
     }
+    if (!selected_only && x->gl_presentation)
+        canvasindex_free(&index);
 }
 
     /* plugdata: "#X presentation obj <index> <x> <y>" and "#X presentation
@@ -4686,20 +4691,25 @@ void canvas_attr(t_canvas *x, t_symbol *s, int argc, t_atom *argv)
 void canvas_attr_save(t_glist *x, t_binbuf *b, int selected_only)
 {
     t_objattr *a;
+    t_canvasindex index;
+    if (!selected_only && x->gl_attr)
+        canvasindex_build(&index, x);
     for (a = x->gl_attr; a; a = a->a_next)
     {
-        int index;
+        int objindex;
         if (selected_only)
         {
             if (!glist_isselected(x, a->a_obj))
                 continue;
-            index = glist_selectionindex(x, a->a_obj, 1);
+            objindex = glist_selectionindex(x, a->a_obj, 1);
         }
-        else index = canvas_getindex(x, a->a_obj);
-        binbuf_addv(b, "ssis", gensym("#X"), gensym("attr"), index, a->a_key);
+        else objindex = canvasindex_get(&index, a->a_obj);
+        binbuf_addv(b, "ssis", gensym("#X"), gensym("attr"), objindex, a->a_key);
         binbuf_add(b, a->a_argc, a->a_argv);
         binbuf_addsemi(b);
     }
+    if (!selected_only && x->gl_attr)
+        canvasindex_free(&index);
 }
 
 void canvas_connect(t_canvas *x, t_symbol *s, int argc, t_atom *argv)

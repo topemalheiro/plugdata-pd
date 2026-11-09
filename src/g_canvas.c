@@ -1103,6 +1103,54 @@ void canvas_presentation_setsize(t_glist *x, int w, int h)
     x->gl_presentation_h = (h > 0 ? h : 0);
 }
 
+    /* ------------- plugdata: canvas index ---------------------------- */
+
+static unsigned int canvasindex_hash(t_gobj *y)
+{
+    unsigned long p = (unsigned long)y;
+    p ^= p >> 17;
+    return (unsigned int)(p * 2654435761u);
+}
+
+void canvasindex_build(t_canvasindex *ci, t_glist *x)
+{
+    t_gobj *y;
+    int i, n = 0;
+    unsigned int size = 16, mask, h;
+    for (y = x->gl_list; y; y = y->g_next)
+        n++;
+    while (size < 2 * (unsigned int)n)
+        size <<= 1;
+    mask = size - 1;
+    ci->ci_size = size;
+    ci->ci_count = n;
+    ci->ci_keys = (t_gobj **)getbytes(size * sizeof(t_gobj *));
+    ci->ci_values = (int *)getbytes(size * sizeof(int));
+    for (y = x->gl_list, i = 0; y; y = y->g_next, i++)
+    {
+        for (h = canvasindex_hash(y) & mask; ci->ci_keys[h]; h = (h + 1) & mask)
+            ;
+        ci->ci_keys[h] = y;
+        ci->ci_values[h] = i;
+    }
+}
+
+    /* the same as canvas_getindex (): the object count for one not in the canvas */
+int canvasindex_get(t_canvasindex *ci, t_gobj *y)
+{
+    unsigned int mask = ci->ci_size - 1, h;
+    for (h = canvasindex_hash(y) & mask; ci->ci_keys[h]; h = (h + 1) & mask)
+        if (ci->ci_keys[h] == y)
+            return (ci->ci_values[h]);
+    return (ci->ci_count);
+}
+
+void canvasindex_free(t_canvasindex *ci)
+{
+    freebytes(ci->ci_keys, ci->ci_size * sizeof(t_gobj *));
+    freebytes(ci->ci_values, ci->ci_size * sizeof(int));
+}
+
     /* ------------- plugdata: per-object attributes ------------------ */
 
 static t_objattr *canvas_attr_find(t_glist *x, t_gobj *y, t_symbol *key)

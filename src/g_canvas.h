@@ -625,6 +625,21 @@ EXTERN void canvas_attr_remove(t_glist *x, t_gobj *y);
 EXTERN void canvas_attr_clear(t_glist *x);
 EXTERN void canvas_attr_copy(t_glist *x, t_gobj *from, t_gobj *to);
 EXTERN void canvas_attr_save(t_glist *x, t_binbuf *b, int selected_only);
+
+    /* plugdata: a canvas's objects' indices, as canvas_getindex () gives them, looked up in
+    constant time: saving a canvas with thousands of objects and connections walked the list
+    for every connection, presentation and attribute line */
+typedef struct _canvasindex
+{
+    t_gobj **ci_keys;
+    int *ci_values;
+    unsigned int ci_size;
+    int ci_count;
+} t_canvasindex;
+
+EXTERN void canvasindex_build(t_canvasindex *ci, t_glist *x);
+EXTERN int canvasindex_get(t_canvasindex *ci, t_gobj *y);
+EXTERN void canvasindex_free(t_canvasindex *ci);
 EXTERN int canvas_isconnected (t_canvas *x,
     t_text *ob1, int n1, t_text *ob2, int n2);
 EXTERN void canvas_selectinrect(t_canvas *x, int lox, int loy, int hix, int hiy);

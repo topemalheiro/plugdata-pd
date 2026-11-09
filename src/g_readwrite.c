@@ -772,11 +772,14 @@ void canvas_saveto(t_canvas *x, t_binbuf *b)
     for (y = x->gl_list; y; y = y->g_next)
         gobj_save(y, b);
 
+        /* plugdata: the objects' indices looked up, not counted out for each connection */
+    t_canvasindex index;
+    canvasindex_build(&index, x);
     linetraverser_start(&t, x);
     while ((oc = linetraverser_next_nosize(&t)))
     {
-        int srcno = canvas_getindex(x, &t.tr_ob->ob_g);
-        int sinkno = canvas_getindex(x, &t.tr_ob2->ob_g);
+        int srcno = canvasindex_get(&index, &t.tr_ob->ob_g);
+        int sinkno = canvasindex_get(&index, &t.tr_ob2->ob_g);
         if(t.outconnect_path_info == gensym("empty"))
         {
             binbuf_addv(b, "ssiiii;", gensym("#X"), gensym("connect"),
@@ -787,6 +790,7 @@ void canvas_saveto(t_canvas *x, t_binbuf *b)
                 srcno, t.tr_outno, sinkno, t.tr_inno, t.outconnect_path_info);
         }
     }
+    canvasindex_free(&index);
     canvas_presentation_save(x, b, 0);
     canvas_attr_save(x, b, 0);
 
