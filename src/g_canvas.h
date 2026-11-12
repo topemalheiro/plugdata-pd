@@ -564,6 +564,19 @@ EXTERN void canvas_setundo(t_canvas *x, t_undofn undofn, void *buf,
 EXTERN void canvas_noundo(t_canvas *x);
 EXTERN int canvas_getindex(t_canvas *x, t_gobj *y);
 
+    /* plugdata: canvas_getindex() for many lookups (see g_canvas.c) */
+typedef struct _canvasindex
+{
+    t_gobj **ci_keys;
+    int *ci_values;
+    unsigned int ci_size;
+    int ci_count;
+} t_canvasindex;
+
+EXTERN void canvasindex_build(t_canvasindex *ci, t_canvas *x);
+EXTERN int canvasindex_get(const t_canvasindex *ci, t_gobj *y);
+EXTERN void canvasindex_free(t_canvasindex *ci);
+
 EXTERN void canvas_connect(t_canvas *x,
                            t_symbol *s, int argc, t_atom *argv);
 EXTERN void canvas_connect_expandargs(t_canvas *x, t_floatarg fwhoout, t_floatarg foutno, t_floatarg fwhoin, t_floatarg finno, t_symbol* path_data);
