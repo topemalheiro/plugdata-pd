@@ -2388,7 +2388,7 @@ void plugdata_forward_message(int type, void* x, t_symbol *s, int argc, t_atom *
     if(EXPECT_LIKELY(INTER->callback_target)) {
         INTER->message_callback(INTER->callback_target, type, (void*)x, s, argc, argv);
     }
-    if(EXPECT_LIKELY(INTER->trace_target) && plugdata_debugging_enabled()) {
+    if(EXPECT_UNLIKELY(INTER->trace_target) && plugdata_debugging_enabled()) {
         INTER->trace_callback(INTER->trace_target, type, (void*)x, s, argc, argv);
     }
 }
@@ -2397,7 +2397,6 @@ void plugdata_forward_message(int type, void* x, t_symbol *s, int argc, t_atom *
 static atomic_bool enable_probe = 0;
 static atomic_bool enable_debugging = 0;
 static atomic_bool enable_activity = 0;
-static atomic_bool enable_execution_order = 0;
 static atomic_bool enabled_debug_or_activity = 0;
 
 int plugdata_object_probe_enabled() {
@@ -2433,13 +2432,4 @@ void set_plugdata_activity_enabled(int enabled_activity)
 {
      atomic_store_explicit(&enable_activity, enabled_activity, memory_order_relaxed);
      atomic_store_explicit(&enabled_debug_or_activity, enabled_activity || atomic_load_explicit(&enable_debugging, memory_order_relaxed), memory_order_relaxed);
-}
-
-int plugdata_execution_order_enabled() {
-    return atomic_load_explicit(&enable_execution_order, memory_order_relaxed);
-}
-
-void set_plugdata_execution_order_enabled(int enabled_execution_order)
-{
-    atomic_store_explicit(&enable_execution_order, enabled_execution_order, memory_order_relaxed);
 }
