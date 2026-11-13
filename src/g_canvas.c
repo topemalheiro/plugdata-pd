@@ -394,6 +394,55 @@ int canvas_getindex(t_canvas *x, t_gobj *y)
     return (indexno);
 }
 
+    /* plugdata: the same indices as canvas_getindex(), from a table built
+    once per canvas.  Saving looked up two indices per connection by walking
+    the list, which is quadratic for canvases with thousands of objects. */
+static unsigned int canvasindex_hash(t_gobj *y)
+{
+    size_t p = (size_t)y;
+    p ^= p >> 17;
+    return (unsigned int)(p * 2654435761u);
+}
+
+void canvasindex_build(t_canvasindex *ci, t_canvas *x)
+{
+    t_gobj *y;
+    int i, n = 0;
+    unsigned int size = 16, mask, h;
+    for (y = x->gl_list; y; y = y->g_next)
+        n++;
+    while (size < 2 * (unsigned int)n)
+        size <<= 1;
+    mask = size - 1;
+    ci->ci_size = size;
+    ci->ci_count = n;
+    ci->ci_keys = (t_gobj **)getbytes(size * sizeof(t_gobj *));
+    ci->ci_values = (int *)getbytes(size * sizeof(int));
+    for (y = x->gl_list, i = 0; y; y = y->g_next, i++)
+    {
+        for (h = canvasindex_hash(y) & mask; ci->ci_keys[h]; h = (h + 1) & mask)
+            ;
+        ci->ci_keys[h] = y;
+        ci->ci_values[h] = i;
+    }
+}
+
+    /* like canvas_getindex(), the object count for an object not in it */
+int canvasindex_get(const t_canvasindex *ci, t_gobj *y)
+{
+    unsigned int mask = ci->ci_size - 1, h;
+    for (h = canvasindex_hash(y) & mask; ci->ci_keys[h]; h = (h + 1) & mask)
+        if (ci->ci_keys[h] == y)
+            return (ci->ci_values[h]);
+    return (ci->ci_count);
+}
+
+void canvasindex_free(t_canvasindex *ci)
+{
+    freebytes(ci->ci_keys, ci->ci_size * sizeof(t_gobj *));
+    freebytes(ci->ci_values, ci->ci_size * sizeof(int));
+}
+
 void linetraverser_start(t_linetraverser *t, t_canvas *x)
 {
     t->tr_ob = 0;
