@@ -567,10 +567,10 @@ EXTERN int canvas_getindex(t_canvas *x, t_gobj *y);
     /* plugdata: canvas_getindex() for many lookups (see g_canvas.c) */
 typedef struct _canvasindex
 {
-    t_gobj **ci_keys;
-    int *ci_values;
-    unsigned int ci_size;
-    int ci_count;
+    t_gobj **ci_keys;       /* the objects, each in its slot; 0 if free */
+    int *ci_values;         /* each object's index, in the same slot */
+    unsigned int ci_size;   /* number of slots, a power of two */
+    int ci_count;           /* number of objects in the canvas */
 } t_canvasindex;
 
 EXTERN void canvasindex_build(t_canvasindex *ci, t_canvas *x);

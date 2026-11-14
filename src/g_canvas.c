@@ -397,9 +397,14 @@ int canvas_getindex(t_canvas *x, t_gobj *y)
     /* plugdata: the same indices as canvas_getindex(), from a table built
     once per canvas.  Saving looked up two indices per connection by walking
     the list, which is quadratic for canvases with thousands of objects. */
+
+    /* an object's first slot comes from its address.  Addresses end in zero
+    bits (memory is aligned), so drop four of them, mix in the high bits,
+    and spread objects that lie close together over the whole table
+    (Knuth's multiplicative hash: a prime near 2^32 over the golden ratio) */
 static unsigned int canvasindex_hash(t_gobj *y)
 {
-    size_t p = (size_t)y;
+    size_t p = (size_t)y >> 4;
     p ^= p >> 17;
     return (unsigned int)(p * 2654435761u);
 }
@@ -411,6 +416,9 @@ void canvasindex_build(t_canvasindex *ci, t_canvas *x)
     unsigned int size = 16, mask, h;
     for (y = x->gl_list; y; y = y->g_next)
         n++;
+        /* at least twice as many slots as objects, so that a free slot is
+        never far; a power of two, so that "& mask" keeps a slot number
+        inside the table */
     while (size < 2 * (unsigned int)n)
         size <<= 1;
     mask = size - 1;
@@ -420,6 +428,7 @@ void canvasindex_build(t_canvasindex *ci, t_canvas *x)
     ci->ci_values = (int *)getbytes(size * sizeof(int));
     for (y = x->gl_list, i = 0; y; y = y->g_next, i++)
     {
+            /* from the object's first slot, step to the first free one */
         for (h = canvasindex_hash(y) & mask; ci->ci_keys[h]; h = (h + 1) & mask)
             ;
         ci->ci_keys[h] = y;
@@ -427,7 +436,8 @@ void canvasindex_build(t_canvasindex *ci, t_canvas *x)
     }
 }
 
-    /* like canvas_getindex(), the object count for an object not in it */
+    /* step from the object's first slot until it's found.  A free slot means
+    it isn't in the canvas: then, like canvas_getindex(), the object count */
 int canvasindex_get(const t_canvasindex *ci, t_gobj *y)
 {
     unsigned int mask = ci->ci_size - 1, h;
