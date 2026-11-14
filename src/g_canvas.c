@@ -1105,9 +1105,13 @@ void canvas_presentation_setsize(t_glist *x, int w, int h)
 
     /* ------------- plugdata: canvas index ---------------------------- */
 
+    /* an object's first slot comes from its address.  Addresses end in zero
+    bits (memory is aligned), so drop four of them, mix in the high bits,
+    and spread objects that lie close together over the whole table
+    (Knuth's multiplicative hash: a prime near 2^32 over the golden ratio) */
 static unsigned int canvasindex_hash(t_gobj *y)
 {
-    unsigned long p = (unsigned long)y;
+    size_t p = (size_t)y >> 4;
     p ^= p >> 17;
     return (unsigned int)(p * 2654435761u);
 }
